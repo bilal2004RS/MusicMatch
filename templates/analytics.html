@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="text-white"><i class="fas fa-chart-bar me-2"></i>Analytics & Statistiques</h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Distribution des Clusters</h5>
+            </div>
+            <div class="card-body">
+                <div id="clusterDistribution"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Statistiques Globales</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <div class="p-3 bg-light rounded">
+                            <p class="text-muted mb-1">Total Utilisateurs</p>
+                            <h3 class="mb-0" id="totalUsers">0</h3>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="p-3 bg-light rounded">
+                            <p class="text-muted mb-1">Total Artistes</p>
+                            <h3 class="mb-0" id="totalArtists">0</h3>
+                        </div>
+                    </div>
+                </div>
+                <div id="topGenres"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    $(document).ready(function() {
+        loadStatistics();
+    });
+    
+    function loadStatistics() {
+        $.get('/api/statistics', function(response) {
+            if (response.success) {
+                const stats = response.statistics;
+                
+                $('#totalUsers').text(stats.total_users);
+                $('#totalArtists').text(stats.total_artists);
+                
+                displayClusterDistribution(stats.cluster_distribution);
+                displayTopGenres(stats.top_genres);
+            }
+        });
+    }
+    
+    function displayClusterDistribution(distribution) {
+        let html = '';
+        Object.values(distribution).forEach(cluster => {
+            html += `
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <strong>${cluster.name}</strong>
+                        <span>${cluster.count} utilisateurs (${cluster.percentage}%)</span>
+                    </div>
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar bg-primary" style="width: ${cluster.percentage}%">
+                            ${cluster.percentage}%
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        $('#clusterDistribution').html(html);
+    }
+    
+    function displayTopGenres(genres) {
+        const html = '<h6 class="mt-4">Genres Populaires</h6>' + genres.slice(0, 5).map(genre => `
+            <div class="d-flex justify-content-between mb-2">
+                <span>${genre.genre}</span>
+                <span class="badge bg-success">${genre.count}</span>
+            </div>
+        `).join('');
+        $('#topGenres').html(html);
+    }
+</script>
+{% endblock %}

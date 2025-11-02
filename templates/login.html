@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center" style="min-height: 80vh; align-items: center;">
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                    <i class="fas fa-music text-primary" style="font-size: 3rem;"></i>
+                    <h2 class="mt-3">Connexion</h2>
+                </div>
+                
+                <div id="message" class="alert d-none"></div>
+                
+                <form id="loginForm">
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control form-control-lg" id="email" required>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label">Mot de passe</label>
+                        <input type="password" class="form-control form-control-lg" id="password" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100 btn-lg mb-3">
+                        <i class="fas fa-sign-in-alt me-2"></i>Se connecter
+                    </button>
+                </form>
+                
+                <p class="text-center mb-0">
+                    Pas de compte ? <a href="/register" class="text-primary fw-bold">S'inscrire</a>
+                </p>
+                
+                <div class="text-center mt-3">
+                    <a href="/" class="text-muted"><i class="fas fa-arrow-left me-1"></i>Retour</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $('#loginForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const data = {
+            email: $('#email').val(),
+            password: $('#password').val()
+        };
+        
+        $.ajax({
+            url: '/login',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function(response) {
+                $('#message').removeClass('d-none alert-danger').addClass('alert-success')
+                    .text(response.message);
+                setTimeout(() => window.location.href = '/dashboard', 1000);
+            },
+            error: function(xhr) {
+                const response = xhr.responseJSON;
+                $('#message').removeClass('d-none alert-success').addClass('alert-danger')
+                    .text(response.message || 'Erreur de connexion');
+            }
+        });
+    });
+</script>
+{% endblock %}
+

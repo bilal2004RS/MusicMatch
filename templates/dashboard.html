@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="text-white"><i class="fas fa-home me-2"></i>Tableau de Bord</h1>
+    </div>
+</div>
+
+<!-- Statistiques -->
+<div class="row mb-4" id="statsCards">
+    <div class="col-md-4 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h5><i class="fas fa-music me-2"></i>Mes Artistes</h5>
+                <h2 class="mb-0" id="artistCount">0</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h5><i class="fas fa-users me-2"></i>Mon Cluster</h5>
+                <h5 class="mb-0" id="clusterName">Chargement...</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h5><i class="fas fa-heart me-2"></i>Amis Similaires</h5>
+                <h2 class="mb-0" id="friendCount">0</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Ajouter un artiste -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Ajouter un Artiste</h5>
+            </div>
+            <div class="card-body">
+                <div id="addArtistMessage" class="alert d-none"></div>
+                
+                <form id="addArtistForm">
+                    <div class="mb-3">
+                        <label class="form-label">Nom de l'artiste</label>
+                        <input type="text" class="form-control" id="artistName" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Genre</label>
+                        <select class="form-select" id="genre">
+                            <option value="Pop">Pop</option>
+                            <option value="Rock">Rock</option>
+                            <option value="Hip-Hop">Hip-Hop</option>
+                            <option value="Electronic">Electronic</option>
+                            <option value="Jazz">Jazz</option>
+                            <option value="Classical">Classical</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Nombre d'écoutes: <span id="playCountValue">50</span></label>
+                        <input type="range" class="form-range" id="playCount" min="1" max="100" value="50">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-plus me-2"></i>Ajouter
+                    </button>
+                </form>
+                
+                <hr>
+                
+                <h6 class="fw-bold">Mes Artistes (<span id="myArtistsCount">0</span>)</h6>
+                <div id="artistsList" class="mt-3" style="max-height: 300px; overflow-y: auto;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recommandations et Amis -->
+    <div class="col-md-6 mb-4">
+        <div class="card mb-3">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-star me-2"></i>Recommandations</h5>
+            </div>
+            <div class="card-body">
+                <div id="recommendationsList"></div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-users me-2"></i>Utilisateurs Similaires</h5>
+            </div>
+            <div class="card-body">
+                <div id="similarUsersList"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        loadUserProfile();
+        loadRecommendations();
+        loadSimilarUsers();
+        
+        $('#playCount').on('input', function() {
+            $('#playCountValue').text($(this).val());
+        });
+        
+        $('#addArtistForm').on('submit', function(e) {
+            e.preventDefault();
+            addArtist();
+        });
+    });
+    
+    function loadUserProfile() {
+        $.get('/api/user/profile', function(response) {
+            if (response.success) {
+                const user = response.user;
+                $('#artistCount').text(user.artists.length);
+                $('#myArtistsCount').text(user.artists.length);
+                $('#clusterName').text(user.cluster_name || 'Non défini');
+                
+                displayArtists(user.artists);
+            }
+        });
+    }
+    
+    function displayArtists(artists) {
+        const html = artists.map(artist => `
+            <div class="card mb-2">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${artist.artist_name}</strong><br>
+                            <small class="text-muted">${artist.genre} • ${artist.play_count} écoutes</small>
+                        </div>
+                        <button class="btn btn-sm btn-danger" onclick="removeArtist(${artist.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        $('#artistsList').html(html || '<p class="text-muted">Aucun artiste ajouté</p>');
+    }
+    
+    function addArtist() {
+        const data = {
+            artist_name: $('#artistName').val(),
+            genre: $('#genre').val(),
+            play_count: parseInt($('#playCount').val())
+        };
+        
+        $.ajax({
+            url: '/api/artists/add',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function(response) {
+                $('#addArtistMessage').removeClass('d-none alert-danger').addClass('alert-success')
+                    .text('Artiste ajouté avec succès!');
+                $('#artistName').val('');
+                $('#playCount').val(50);
+                $('#playCountValue').text('50');
+                
+                setTimeout(() => {
+                    $('#addArtistMessage').addClass('d-none');
+                    loadUserProfile();
+                    loadRecommendations();
+                    loadSimilarUsers();
+                }, 1500);
+            },
+            error: function() {
+                $('#addArtistMessage').removeClass('d-none alert-success').addClass('alert-danger')
+                    .text('Erreur lors de l\'ajout');
+            }
+        });
+    }
+    
+    function removeArtist(id) {
+        if (confirm('Supprimer cet artiste ?')) {
+            $.ajax({
+                url: `/api/artists/remove/${id}`,
+                method: 'DELETE',
+                success: function() {
+                    loadUserProfile();
+                    loadRecommendations();
+                    loadSimilarUsers();
+                }
+            });
+        }
+    }
+    
+    function loadRecommendations() {
+        $.get('/api/recommendations', function(response) {
+            if (response.success && response.recommendations.length > 0) {
+                const html = response.recommendations.map(rec => `
+                    <div class="card mb-2 border-success">
+                        <div class="card-body p-3">
+                            <strong>${rec.artist_name}</strong><br>
+                            <small class="text-muted">Popularité: ${rec.popularity} utilisateurs</small>
+                        </div>
+                    </div>
+                `).join('');
+                $('#recommendationsList').html(html);
+            } else {
+                $('#recommendationsList').html('<p class="text-muted">Ajoutez des artistes pour obtenir des recommandations</p>');
+            }
+        });
+    }
+    
+    function loadSimilarUsers() {
+        $.get('/api/similar-users', function(response) {
+            if (response.success && response.similar_users.length > 0) {
+                $('#friendCount').text(response.similar_users.length);
+                const html = response.similar_users.map(user => `
+                    <div class="card mb-2 border-info">
+                        <div class="card-body p-3">
+                            <strong>${user.username}</strong><br>
+                            <small class="text-muted">${user.num_artists} artistes</small>
+                        </div>
+                    </div>
+                `).join('');
+                $('#similarUsersList').html(html);
+            } else {
+                $('#friendCount').text('0');
+                $('#similarUsersList').html('<p class="text-muted">Aucun utilisateur similaire trouvé</p>');
+            }
+        });
+    }
+</script>
+{% endblock %}
+
