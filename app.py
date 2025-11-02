@@ -10,6 +10,13 @@ import pandas as pd
 from datetime import datetime
 import json
 import os
+import gradio as gr
+
+def greet(name):
+    return "Hello " + name + "!!"
+
+demo = gr.Interface(fn=greet, inputs="text", outputs="text")
+demo.launch()
 
 # Initialisation de l'application Flask
 app = Flask(__name__)
